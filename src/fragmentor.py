@@ -45,8 +45,8 @@ class SocialNetwork(Enum):
                 ('', 'reaction', None),
                 ('', 'isVideo', ''), #TODO: verificar o media_type 
                 ('statistics.comment_count', 'comments', ''),
-                ('', 'url'),
-                ('', 'profileUrl'),
+                ('', 'url', ''),
+                ('', 'profileUrl', ''),
                 ('statistics.views', 'videoViewCount', ''),
                 ('', 'isPrivateUser', None),
                 ('', 'isVerifiedUser', None),
