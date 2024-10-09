@@ -1,7 +1,7 @@
 """Pega um arquivo csv e divide ele em arquivos menores."""
 
 from enum import Enum
-import utils
+import utils.utils as utils
 import pandas as pd
 
 MAX_LINES = 500
