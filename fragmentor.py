@@ -4,7 +4,7 @@ import os
 import sys
 import pandas as pd
 
-MAX_LINES = 300
+MAX_LINES = 500
 
 def validate_file_extension(file_name: str, extension: str):
     """Check if the file has the correct extension."""
@@ -49,14 +49,88 @@ def read_posts_from_extraction(file_path: str) -> pd.DataFrame:
         sys.exit(1)
 
 
+def map_columns(choice: int):
+    #TODO pegar o tema
+
+    if choice == 1: # Instagram
+        #Content Librarry, export comments, value
+        return [
+            ('post_owner.name','name', ''),
+            ('creation_time', 'time', ''),
+            ('statistics.like_count', 'likes', ''),
+            ('text', 'message', ''),
+            ('post_owner.id', 'profileId', ''),
+            ('', 'commentId', None), #Null in export comments
+            ('post_owner.username', 'username', ''),
+            ('', 'parentCommentId', None), #Null in export comments
+            ('', 'replies', None), #Null in export comments
+            ('', 'reply', False), #False
+            ('', 'shortcode', ''), #obter quando conseguir o link
+            ('', 'reaction', None), # Null in export comments
+            ('media_type', 'isVideo'), #verificar o media_type #TODO
+            ('statistics.comment_count', 'comments', ''),
+            ('', 'url'), #obter
+            ('', 'profileUrl'), #obter a partir do username #TODO
+            ('statistics.views', 'videoViewCount', ''),
+            ('', 'isPrivateUser', None), # Null in export comments
+            ('', 'isVerifiedUser', None), # Null in export comments
+            ('', 'displayUrl', ''),
+            ('', 'followersCount', ''), # Sempre zero
+            ('id', 'id', ''),
+            ('', 'caption', None), # Null in export commments
+            ('', 'thumbnail', None), # Null in export commments
+            ('', 'accessibilityCaption', None), # Null in export commments
+            ('', 'commentsDisabled', None), # Not found in content library (null)
+            ('', 'videoDuration', ''),
+            ('media_type', 'productType', ''),
+            ('', 'isSponsored', False), # Sempre falso
+            ('', 'locationName', None), # Null in export commments
+            ('', 'mediaCount', None), # Null in export commments
+            ('multimedia', 'media', '')
+            ('', 'owner', None) #Null in export commments
+            ('', 'profileImage', None), # not found (null)
+            ('hashtags', 'terms', ''),    
+        ]
+    elif choice == 2: #Facebook
+        return [
+            ('id', 'id', ''),
+            ('post_owner.name','name', ''),
+            ('post_owner.username', 'nickName', ''),
+            ('creation_time', 'time', ''),
+            ('text', 'message', ''),
+            ('post_owner.id', 'profileId', ''),
+            ('', 'postId', '') # Não tem
+            ('multimedia', 'media', '')
+            ('', 'attachments', None) # Null in export comments
+            #('', 'countReactionTypes', '') # Não terá esse. Reações separadas abaixo
+            ('statistics.comment_count', 'countComment', ''),
+            ('statistics.views', 'countSeen', ''),
+            ('statistics.share_count', 'countShare', ''),
+            ('statistics.reaction_count', 'countReaction', ''),
+            ('statistics.like_count', 'countLike', ''),
+            ('statistics.love_count', 'countLove', ''),
+            ('statistics.care_count', 'countCare', ''),
+            ('statistics.haha_count', 'countHaha', ''),
+            ('statistics.wow_count', 'countWow', ''),
+            ('statistics.sad_count', 'countSad', ''),
+            ('statistics.angry_count', 'countAngry', ''),
+            ('', 'profileUrl', 'profileUrl') #TODO pegar a partir do nome
+            ('', 'postUrl', '') #TODO pega
+            ('', 'adUrl', '') # Not found in Content library
+        ]
+    else:
+        print("Opção inválida")
+        sys.exit(1)
+
+
 def main():
     file_name = list_files_and_get_input()
     validate_file_extension(file_name, '.csv')
     data_posts = read_posts_from_extraction(file_name)
     
-    length = len(data_posts)
-    data_posts = data_posts.drop_duplicates(subset='Caption') # It should be post_id, but we don't have that information
-    print(f"Foram removidos {length - len(data_posts)} posts duplicados.")
+    prev_length = len(data_posts)
+    data_posts = data_posts.drop_duplicates(subset='id')
+    duplicates = prev_length - len(data_posts)
 
     part = 1
     for i in range(0, len(data_posts), MAX_LINES):
