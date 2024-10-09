@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import re
 from urllib.parse import urlparse
+import json
 
 MIX_CARACTERES = 100
 
@@ -228,3 +229,37 @@ def extract_relevant_url(url: str) -> str:
     """Extracts the relevant part of the URL."""
     parsed_url = urlparse(url)
     return f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+
+
+def extract_theme_from_filename(filename: str) -> str:
+    """Extracts the theme from the filename, considering composite names."""
+    # Regex to match the date pattern in the filename
+    match = re.search(r'_\d{2}_\d{2}_\d{2}_', filename)
+    if match:
+        theme = filename[:match.start()]
+    else:
+        theme = filename.split('_')[0]  # Fallback if no date pattern is found
+
+    return theme.lower()
+    
+
+def format_data(data_posts: pd.DataFrame, theme: str) -> list:
+    formatted_data = []
+    for _, row in data_posts.iterrows():
+        formatted_data.append({
+            "body": row.to_dict(),
+            "metadata": {
+                "theme": theme,
+                "terms": '',
+                "api_version": 'ContentLibrary'
+            }
+        })
+    return formatted_data
+
+
+def save_to_json(data: list[dict], filename: str):
+    """Saves a list of data to a JSON file."""
+    
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+    print(f"Arquivo {filename} salvo com sucesso.")

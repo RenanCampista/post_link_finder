@@ -2,11 +2,6 @@
 
 from enum import Enum
 import requests
-import os
-import sys
-import pandas as pd
-from dotenv import load_dotenv
-import re
 import time
 from utils.utils import SocialNetwork
 import utils.utils as utils
@@ -133,3 +128,8 @@ def main():
                 print(f"URL encontrada para a linha {index + 1} de forma alternativa: {post_url:}")     
             else:
                 print(f"URL não encontrada para a linha {index + 1}")
+             
+    data_posts.to_csv(f'{file_name[:-4]}_with_urls.csv', index=False)
+    json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
+    utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
+    
