@@ -3,6 +3,9 @@
 import sys
 import os
 import pandas as pd
+import re
+
+MIX_CARACTERES = 100
 
 def validate_file_extension(file_name: str, extension: str):
     """Check if the file has the correct extension."""
@@ -45,3 +48,24 @@ def read_posts(file_path: str) -> pd.DataFrame:
     except KeyError as e:
         print(f"Coluna não encontrada: {e}")
         sys.exit(1)
+        
+
+def clean_data_posts(data_posts: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicates and posts with less than min caracteres characters."""
+    prev_length = len(data_posts)
+    
+    # Remove posts duplicados
+    data_posts = data_posts.drop_duplicates(subset='id')
+    duplicates = prev_length - len(data_posts)
+
+    # Remove posts com menos de MIX_CARACTERES caracteres
+    data_posts = data_posts[data_posts['text'].str.len() >= MIX_CARACTERES]
+    min_caracteres_removed = prev_length - len(data_posts)
+
+    # Remove quebras de linha e vírgulas do campo 'text'
+    data_posts['text'] = data_posts['text'].apply(lambda x: re.sub(r'[,\r\n]', ' ', str(x)))
+
+    print(f"{duplicates} posts duplicados foram removidos.")
+    print(f"{min_caracteres_removed} posts com menos de {MIX_CARACTERES} caracteres foram removidos.")
+    
+    return data_posts
