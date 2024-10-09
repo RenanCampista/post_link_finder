@@ -121,9 +121,9 @@ def main():
 
     part = 1
     for i in range(0, len(data_posts_fixed), MAX_LINES):
-        data_posts_fixed[i:i+MAX_LINES].to_csv(f'{file_name}_part{part}.csv', index=False),
+        data_posts_fixed[i:i+MAX_LINES].to_csv(f'{file_name[:-4]}_part{part}.csv', index=False),
         part += 1
-    print(f"Arquivo dividido em {part-1} partes.")
+    print(f"Arquivo {file_name} dividido em {part-1} partes.")
     
     
 if __name__ == '__main__':
