@@ -65,7 +65,9 @@ def clean_data_posts(data_posts: pd.DataFrame) -> pd.DataFrame:
     # Remove quebras de linha e vírgulas do campo 'text'
     data_posts['text'] = data_posts['text'].apply(lambda x: re.sub(r'[,\r\n]', ' ', str(x)))
 
-    print(f"{duplicates} posts duplicados foram removidos.")
-    print(f"{min_caracteres_removed} posts com menos de {MIX_CARACTERES} caracteres foram removidos.")
+    print(f"\nTotal de posts lidos: {prev_length}.")
+    print(f"Posts com menos de {MIX_CARACTERES} caracteres: {prev_length - len(data_posts)}.")
+    print(f"Posts duplicados: {duplicates}.")
+    print(f"Posts restantes: {prev_length - duplicates - min_caracteres_removed}.")
     
     return data_posts

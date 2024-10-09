@@ -96,16 +96,19 @@ class SocialNetwork(Enum):
             ]
         else:
             raise ValueError(f"Rede social inválida {self}.")
+        
+    def generate_profile_url(self, username: str) -> str:
+        """Generate the profile URL based on the username."""
+        return f"{self.url}{username}"
              
     def fix_df(self, posts_cl: pd.DataFrame) -> pd.DataFrame:
         """Fix the DataFrame based on the social network."""
         df_fixed = pd.DataFrame()
+        
         for cl_column, ec_column, value in self.mapping_columns():
-            if cl_column:
-                df_fixed[ec_column] = posts_cl[cl_column]
-            else:
-                df_fixed[ec_column] = f"{self.value}{posts_cl['post_owner.username']}" \
-                                        if ec_column == 'profileUrl' else value
+            df_fixed[ec_column] = posts_cl[cl_column] if cl_column else value
+
+        df_fixed['profileUrl'] = df_fixed['username'].apply(self.generate_profile_url)
 
         return df_fixed
             
@@ -123,8 +126,8 @@ def main():
     for i in range(0, len(data_posts_fixed), MAX_LINES):
         data_posts_fixed[i:i+MAX_LINES].to_csv(f'{file_name[:-4]}_part{part}.csv', index=False),
         part += 1
-    print(f"Arquivo {file_name} dividido em {part-1} partes.")
-    
+    print(f"Arquivo {file_name} foi dividido em {part-1} partes.")
+
     
 if __name__ == '__main__':
     main()
