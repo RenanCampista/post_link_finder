@@ -1,4 +1,4 @@
-"""Funções úteis"""
+"""Utility functions for the Content Library project."""
 
 from enum import Enum
 import sys

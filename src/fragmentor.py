@@ -1,4 +1,4 @@
-"""Pega um arquivo csv e divide ele em arquivos menores."""
+"""Fragmentor module"""
 
 from utils.utils import SocialNetwork
 import utils.utils as utils
