@@ -2,7 +2,6 @@
 
 from utils.utils import SocialNetwork
 import utils.utils as utils
-import pandas as pd
 
 MAX_LINES = 500
        

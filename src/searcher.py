@@ -8,11 +8,11 @@ import utils.utils as utils
 from dotenv import load_dotenv
 import random
 from bs4 import BeautifulSoup
+from googlesearch import search
 
 
 class Searcher:
     CSE_API_URL = "https://www.googleapis.com/customsearch/v1"
-    #CSE_API_URL = 'https://customsearch.googleapis.com/customsearch/v1/siterestrict'
     def __init__(self, cse_id: str, num_keys: int):
         self.cse_id = cse_id
         self.keys = []
@@ -53,55 +53,60 @@ class Searcher:
                     self.keys[attempt][2] = False
                 else:
                     print(f"Erro na requisição: {e}")
-        return ''
+        return ''        
             
             
-            
-class SearchEngineAlternatives(Enum):
-    """The search engines used to search for the posts."""
-    #BING = "https://www.bing.com/search?q="
-    DUCKDUCKGO =  "https://duckduckgo.com/html/?q="
-   # GOOGLE = "https://www.google.com/search?q="
+# class SearchEngineAlternatives(Enum):
+#     """The search engines used to search for the posts."""
+#     BING = "https://www.bing.com/search?q="
+#     DUCKDUCKGO =  "https://duckduckgo.com/html/?q="
+#     GOOGLE = "https://www.google.com/search?q="
     
-    def get_url(self) -> str:
-        return self.value
+#     def get_url(self) -> str:
+#         return self.value
     
 
-def search_alternative(query: str, social_network: SocialNetwork):
-    USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.48",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    ]
+# def search_alternative(query: str, social_network: SocialNetwork):
+#     USER_AGENTS = [
+#         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+#         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+#         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+#         "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+#         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.48",
+#         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+#     ]
     
-    headers = {
-        "User-Agent": random.choice(USER_AGENTS),
-    }
+#     headers = {
+#         "User-Agent": random.choice(USER_AGENTS),
+#     }
     
-    search_engines = [(engine.get_url() + query)
-                      for engine in SearchEngineAlternatives]
+#     search_engines = [(engine.get_url() + query)
+#                       for engine in SearchEngineAlternatives]
 
-    for search_url in search_engines:
-        response = requests.get(search_url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+#     for search_url in search_engines:
+#         response = requests.get(search_url, headers=headers)
+#         soup = BeautifulSoup(response.text, 'html.parser')
 
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            if social_network.is_valid_link(href):
-                return href
-            return ''
-        time.sleep(random.uniform(1, 3))
-    return ''
+#         for link in soup.find_all('a', href=True):
+#             href = link['href']
+#             if social_network.is_valid_link(href):
+#                 return href
+#             return ''
+#         time.sleep(random.uniform(1, 3))
+#     return ''
 
+
+def search_with_gs(query: str, social_network: SocialNetwork) -> str:
+    """Searches Google for the query and returns the first relevant URL."""
+    for result in search(query, num_results=5, lang='pt-br', sleep_interval=5):
+        if social_network.is_valid_link(result):
+            return result
 
 def main():
-    google_ofc_searcher = Searcher(
-        cse_id=utils.env_variable("CSE_ID"),
-        num_keys=int(utils.env_variable("NUM_KEYS"))
-    )
+    # google_ofc_searcher = Searcher(
+    #     cse_id=utils.env_variable("CSE_ID"),
+    #     num_keys=int(utils.env_variable("NUM_KEYS"))
+    # )
     
     social_network = SocialNetwork.get_social_network()
     file_name = utils.list_files_and_get_input()
@@ -113,29 +118,43 @@ def main():
     data_posts[url_column] = data_posts[url_column].astype(str)
     
     for index, row in data_posts.iterrows():
-        query = row['message']
-       
-        post_url = google_ofc_searcher.start_search(
-            query=query,
-            social_network=social_network,
-            max_results=10
-        )
+        text = row['message']
+        text = utils.filter_bmp_characters(text)
         
+        query = social_network.generate_query(text, row['username'])
+        post_url = search_with_gs(query, social_network)
+       
         if post_url:
             post_url = utils.extract_relevant_url(post_url)
             data_posts.at[index, social_network.get_post_url_column()] = post_url
             print(f"URL encontrada para a linha {index + 2}: {post_url:}")
         else:
-            new_query = social_network.generate_alternative_query(query)
-            post_url = search_alternative(new_query, social_network)
-            if post_url:
-                post_url = utils.extract_relevant_url(post_url)
-                data_posts.at[index, social_network.get_post_url_column()] = post_url
-                print(f"URL encontrada para a linha {index + 2} de forma alternativa: {post_url:}")     
-            else:
-                print(f"URL não encontrada para a linha {index + 2}")
-                #remover linha
-                data_posts.drop(index, inplace=True)
+            print(f"URL não encontrada para a linha {index + 2}")
+            data_posts.drop(index, inplace=True) #remover a linha
+            
+       
+       
+        # post_url = google_ofc_searcher.start_search(
+        #     query=query,
+        #     social_network=social_network,
+        #     max_results=10
+        # )
+        
+        # if post_url:
+        #     post_url = utils.extract_relevant_url(post_url)
+        #     data_posts.at[index, social_network.get_post_url_column()] = post_url
+        #     print(f"URL encontrada para a linha {index + 2}: {post_url:}")
+        # else:
+        #     new_query = social_network.generate_alternative_query(query)
+        #     post_url = search_alternative(new_query, social_network)
+        #     if post_url:
+        #         post_url = utils.extract_relevant_url(post_url)
+        #         data_posts.at[index, social_network.get_post_url_column()] = post_url
+        #         print(f"URL encontrada para a linha {index + 2} de forma alternativa: {post_url:}")     
+        #     else:
+        #         print(f"URL não encontrada para a linha {index + 2}")
+        #         #remover linha
+                # data_posts.drop(index, inplace=True)
              
     data_posts.to_csv(f'{file_name[:-4]}_with_urls.csv', index=False)
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))

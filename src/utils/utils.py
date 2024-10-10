@@ -65,35 +65,35 @@ class SocialNetwork(Enum):
                 ('statistics.like_count', 'likes', ''),
                 ('text', 'message', ''),
                 ('post_owner.id', 'profileId', ''),
-                ('', 'commentId', 'Null'), 
+                ('', 'commentId', None), 
                 ('post_owner.username', 'username', ''),
-                ('', 'parentCommentId', 'Null'), 
-                ('', 'replies', 'Null'),
-                ('', 'reply', 'False'),
+                ('', 'parentCommentId', None), 
+                ('', 'replies', None),
+                ('', 'reply', False),
                 ('', 'shortcode', ''),
-                ('', 'reaction', 'Null'),
+                ('', 'reaction', None),
                 ('', 'isVideo', ''), #TODO: verificar o media_type 
                 ('statistics.comment_count', 'comments', ''),
                 ('', 'url', ''),
                 ('', 'profileUrl', ''),
                 ('statistics.views', 'videoViewCount', ''),
-                ('', 'isPrivateUser', 'Null'),
-                ('', 'isVerifiedUser', 'Null'),
+                ('', 'isPrivateUser', None),
+                ('', 'isVerifiedUser', None),
                 ('', 'displayUrl', ''),
                 ('', 'followersCount', ''),
                 ('id', 'id', ''),
-                ('', 'caption', 'Null'),
-                ('', 'thumbnail', 'Null'),
-                ('', 'accessibilityCaption', 'Null'),
-                ('', 'commentsDisabled', 'Null'),
+                ('', 'caption', None),
+                ('', 'thumbnail', None),
+                ('', 'accessibilityCaption', None),
+                ('', 'commentsDisabled', None),
                 ('', 'videoDuration', ''),
                 ('media_type', 'productType', ''),
-                ('', 'isSponsored', 'False'), 
-                ('', 'locationName', 'Null'),
-                ('', 'mediaCount', 'Null'),
+                ('', 'isSponsored', False), 
+                ('', 'locationName', None),
+                ('', 'mediaCount', None),
                 ('multimedia', 'media', ''),
-                ('', 'owner', 'Null'),
-                ('', 'profileImage', 'Null'),
+                ('', 'owner', None),
+                ('', 'profileImage', None),
                 ('hashtags', 'terms', '')    
             ]
         elif self == self.__class__.FACEBOOK:
@@ -106,7 +106,7 @@ class SocialNetwork(Enum):
                 ('post_owner.id', 'profileId', ''),
                 ('', 'postId', ''),
                 ('multimedia', 'media', ''),
-                ('', 'attachments', 'Null'),
+                ('', 'attachments', None),
                 #('', 'countReactionTypes', '') # Não terá esse. Reações separadas abaixo
                 ('statistics.comment_count', 'countComment', ''),
                 ('statistics.views', 'countSeen', ''),
@@ -132,11 +132,11 @@ class SocialNetwork(Enum):
         return f"{self.url}{username}"
              
              
-    def generate_alternative_query(self, query: str) ->str:
+    def generate_query(self, query: str, username: str) ->str:
         if self == self.__class__.INSTAGRAM:
-            return f'site:+instagram.com+{query}'
+            return f'site: instagram.com username: {username} {query}'
         elif self == self.__class__.FACEBOOK:
-            return f'site:+facebook.com+{query}'
+            return f'site: facebook.com username: {username} {query}'
         else:
             raise ValueError(f"Rede social inválida {self}.")
           
@@ -245,12 +245,12 @@ def extract_theme_from_filename(filename: str) -> str:
         theme = filename[:match.start()]
     else:
         theme = filename.split('_')[0]  # Fallback if no date pattern is found
-
     return theme.lower()
     
 
 def format_data(data_posts: pd.DataFrame, theme: str) -> list:
-    
+    data_posts = data_posts.fillna('')
+    data_posts = data_posts.replace("Null", None)
     formatted_data = []
     for _, row in data_posts.iterrows():
         formatted_data.append({
