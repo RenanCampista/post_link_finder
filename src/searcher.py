@@ -5,13 +5,14 @@ import requests
 import time
 from utils.utils import SocialNetwork
 import utils.utils as utils
+from dotenv import load_dotenv
 import random
 from bs4 import BeautifulSoup
 
 
 class Searcher:
     CSE_API_URL = "https://www.googleapis.com/customsearch/v1"
-
+    #CSE_API_URL = 'https://customsearch.googleapis.com/customsearch/v1/siterestrict'
     def __init__(self, cse_id: str, num_keys: int):
         self.cse_id = cse_id
         self.keys = []
@@ -37,7 +38,8 @@ class Searcher:
                 response.raise_for_status()
                 search_results = response.json()
                 self.keys[attempt][1] += 1
-                
+                print(search_results)
+                time.sleep(5)
                 items = search_results.get('items', [])
                 for item in items:
                     link = item['link']
@@ -57,8 +59,9 @@ class Searcher:
             
 class SearchEngineAlternatives(Enum):
     """The search engines used to search for the posts."""
-    BING = "https://www.bing.com/search?q="
+    #BING = "https://www.bing.com/search?q="
     DUCKDUCKGO =  "https://duckduckgo.com/html/?q="
+   # GOOGLE = "https://www.google.com/search?q="
     
     def get_url(self) -> str:
         return self.value
@@ -97,7 +100,7 @@ def search_alternative(query: str, social_network: SocialNetwork):
 def main():
     google_ofc_searcher = Searcher(
         cse_id=utils.env_variable("CSE_ID"),
-        num_keys=utils.env_variable("NUM_KEYS")
+        num_keys=int(utils.env_variable("NUM_KEYS"))
     )
     
     social_network = SocialNetwork.get_social_network()
@@ -105,10 +108,13 @@ def main():
     utils.validate_file_extension(file_name, '.csv')
     data_posts = utils.read_posts(file_name)
     
+    # Converter a coluna de URLs para string
+    url_column = social_network.get_post_url_column()
+    data_posts[url_column] = data_posts[url_column].astype(str)
+    
     for index, row in data_posts.iterrows():
-        text = row['message']
-        query = utils.filter_bmp_characters(text)
-        
+        query = row['message']
+       
         post_url = google_ofc_searcher.start_search(
             query=query,
             social_network=social_network,
@@ -118,18 +124,23 @@ def main():
         if post_url:
             post_url = utils.extract_relevant_url(post_url)
             data_posts.at[index, social_network.get_post_url_column()] = post_url
-            print(f"URL encontrada para a linha {index + 1}: {post_url:}")
+            print(f"URL encontrada para a linha {index + 2}: {post_url:}")
         else:
             new_query = social_network.generate_alternative_query(query)
             post_url = search_alternative(new_query, social_network)
             if post_url:
                 post_url = utils.extract_relevant_url(post_url)
                 data_posts.at[index, social_network.get_post_url_column()] = post_url
-                print(f"URL encontrada para a linha {index + 1} de forma alternativa: {post_url:}")     
+                print(f"URL encontrada para a linha {index + 2} de forma alternativa: {post_url:}")     
             else:
-                print(f"URL não encontrada para a linha {index + 1}")
+                print(f"URL não encontrada para a linha {index + 2}")
+                #remover linha
+                data_posts.drop(index, inplace=True)
              
     data_posts.to_csv(f'{file_name[:-4]}_with_urls.csv', index=False)
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
     
+if __name__ == '__main__':
+    load_dotenv()
+    main()

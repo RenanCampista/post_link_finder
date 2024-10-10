@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse
 import json
 
-MIX_CARACTERES = 100
+MIX_CARACTERES = 200
 
 
 class SocialNetwork(Enum):
@@ -19,6 +19,7 @@ class SocialNetwork(Enum):
     
     def __init__(self, url):
         self.url = url
+        
         
     @staticmethod 
     def get_social_network() -> 'SocialNetwork':
@@ -32,6 +33,7 @@ class SocialNetwork(Enum):
             print("Opção inválida.")
             return SocialNetwork.get_social_network()
         
+        
     def get_post_url_column(self) -> str:
         if self == self.__class__.INSTAGRAM:
             return 'url'
@@ -39,6 +41,7 @@ class SocialNetwork(Enum):
             return 'postUrl'
         else:
             raise ValueError(f"Rede social inválida {self}.")
+    
     
     def is_valid_link(self, link: str) ->bool:
         if self == self.__class__.INSTAGRAM:
@@ -52,6 +55,7 @@ class SocialNetwork(Enum):
         else:
             raise ValueError(f"Rede social inválida {self}.")
     
+    
     def mapping_columns(self) -> list:
         """Return a list of tuples with the original column name, the new column name and the default value."""
         if self == self.__class__.INSTAGRAM:
@@ -61,35 +65,35 @@ class SocialNetwork(Enum):
                 ('statistics.like_count', 'likes', ''),
                 ('text', 'message', ''),
                 ('post_owner.id', 'profileId', ''),
-                ('', 'commentId', None), 
+                ('', 'commentId', 'Null'), 
                 ('post_owner.username', 'username', ''),
-                ('', 'parentCommentId', None), 
-                ('', 'replies', None),
-                ('', 'reply', False),
+                ('', 'parentCommentId', 'Null'), 
+                ('', 'replies', 'Null'),
+                ('', 'reply', 'False'),
                 ('', 'shortcode', ''),
-                ('', 'reaction', None),
+                ('', 'reaction', 'Null'),
                 ('', 'isVideo', ''), #TODO: verificar o media_type 
                 ('statistics.comment_count', 'comments', ''),
                 ('', 'url', ''),
                 ('', 'profileUrl', ''),
                 ('statistics.views', 'videoViewCount', ''),
-                ('', 'isPrivateUser', None),
-                ('', 'isVerifiedUser', None),
+                ('', 'isPrivateUser', 'Null'),
+                ('', 'isVerifiedUser', 'Null'),
                 ('', 'displayUrl', ''),
                 ('', 'followersCount', ''),
                 ('id', 'id', ''),
-                ('', 'caption', None),
-                ('', 'thumbnail', None),
-                ('', 'accessibilityCaption', None),
-                ('', 'commentsDisabled', None),
+                ('', 'caption', 'Null'),
+                ('', 'thumbnail', 'Null'),
+                ('', 'accessibilityCaption', 'Null'),
+                ('', 'commentsDisabled', 'Null'),
                 ('', 'videoDuration', ''),
                 ('media_type', 'productType', ''),
-                ('', 'isSponsored', False), 
-                ('', 'locationName', None),
-                ('', 'mediaCount', None),
+                ('', 'isSponsored', 'False'), 
+                ('', 'locationName', 'Null'),
+                ('', 'mediaCount', 'Null'),
                 ('multimedia', 'media', ''),
-                ('', 'owner', None),
-                ('', 'profileImage', None),
+                ('', 'owner', 'Null'),
+                ('', 'profileImage', 'Null'),
                 ('hashtags', 'terms', '')    
             ]
         elif self == self.__class__.FACEBOOK:
@@ -102,7 +106,7 @@ class SocialNetwork(Enum):
                 ('post_owner.id', 'profileId', ''),
                 ('', 'postId', ''),
                 ('multimedia', 'media', ''),
-                ('', 'attachments', None),
+                ('', 'attachments', 'Null'),
                 #('', 'countReactionTypes', '') # Não terá esse. Reações separadas abaixo
                 ('statistics.comment_count', 'countComment', ''),
                 ('statistics.views', 'countSeen', ''),
@@ -122,9 +126,11 @@ class SocialNetwork(Enum):
         else:
             raise ValueError(f"Rede social inválida {self}.")
         
+        
     def generate_profile_url(self, username: str) -> str:
         """Generate the profile URL based on the username."""
         return f"{self.url}{username}"
+             
              
     def generate_alternative_query(self, query: str) ->str:
         if self == self.__class__.INSTAGRAM:
@@ -133,6 +139,7 @@ class SocialNetwork(Enum):
             return f'site:+facebook.com+{query}'
         else:
             raise ValueError(f"Rede social inválida {self}.")
+          
              
     def fix_df(self, posts_cl: pd.DataFrame) -> pd.DataFrame:
         """Fix the DataFrame based on the social network."""
@@ -144,7 +151,6 @@ class SocialNetwork(Enum):
         df_fixed['profileUrl'] = df_fixed['username'].apply(self.generate_profile_url)
 
         return df_fixed
-
 
 
 def env_variable(var_name: str) -> str:
@@ -207,7 +213,7 @@ def clean_data_posts(data_posts: pd.DataFrame) -> pd.DataFrame:
     prev_length = len(data_posts)
     
     # Remove posts duplicados
-    data_posts = data_posts.drop_duplicates(subset='id')
+    data_posts = data_posts.drop_duplicates(subset='text')
     duplicates = prev_length - len(data_posts)
 
     # Remove posts com menos de MIX_CARACTERES caracteres
@@ -244,6 +250,7 @@ def extract_theme_from_filename(filename: str) -> str:
     
 
 def format_data(data_posts: pd.DataFrame, theme: str) -> list:
+    
     formatted_data = []
     for _, row in data_posts.iterrows():
         formatted_data.append({
@@ -257,9 +264,7 @@ def format_data(data_posts: pd.DataFrame, theme: str) -> list:
     return formatted_data
 
 
-def save_to_json(data: list[dict], filename: str):
+def save_to_json(data: list, filename: str):
     """Saves a list of data to a JSON file."""
-    
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
-    print(f"Arquivo {filename} salvo com sucesso.")
+    with open(filename, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
