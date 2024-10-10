@@ -55,9 +55,23 @@ class Searcher:
 
 def search_with_gs(query: str, social_network: SocialNetwork) -> str:
     """Searches Google for the query and returns the first relevant URL."""
-    for result in search(query, num_results=5, lang='pt-br', sleep_interval=5):
-        if social_network.is_valid_link(result):
-            return result
+    max_retries = 5
+    sleep_time = 5  # Initial sleep time in seconds
+
+    for attempt in range(max_retries):
+        try:
+            for result in search(query, num_results=5, lang='pt-br', sleep_interval=5):
+                if social_network.is_valid_link(result):
+                    return result
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                print(f"Erro 429: Tentativa {attempt + 1} de {max_retries}. Aguardando {sleep_time} segundos.")
+                time.sleep(sleep_time)
+                sleep_time *= 2  # Exponential backoff
+            else:
+                print(f"Erro na requisição: {e}")
+                break
+    return ''
 
 def main():
     social_network = SocialNetwork.get_social_network()
