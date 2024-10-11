@@ -2,8 +2,8 @@
 
 import requests
 import time
-from utils.utils import SocialNetwork
-import utils.utils as utils
+from social_network.social_network import SocialNetwork
+from utils import utils
 from dotenv import load_dotenv
 from googlesearch import search
 

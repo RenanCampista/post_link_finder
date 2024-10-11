@@ -1,7 +1,7 @@
 """Fragmentor module"""
 
-from utils.utils import SocialNetwork
-import utils.utils as utils
+from social_network.social_network import SocialNetwork
+from utils import utils
 
 MAX_LINES = 500
        
