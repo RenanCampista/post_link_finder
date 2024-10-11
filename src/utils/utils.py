@@ -56,7 +56,7 @@ def get_cse_keys(num_keys: int) -> list:
     cse_keys: list[list[str, int, bool]] # # [key, num_requests, is_active]]
     
     cse_keys = [
-        [env_variable(f"CSE_KEY_{i}"), 0, True] for i in range(1, num_keys + 1)
+        [env_variable(f"CSE_API_KEY_{i}"), 0, True] for i in range(num_keys)
     ]
     
     return cse_keys

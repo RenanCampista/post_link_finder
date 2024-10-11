@@ -70,7 +70,7 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
 def main():
     global CSE_ID
     CSE_ID = utils.env_variable("CSE_ID")
-    cse_keys = utils.get_cse_keys()
+    cse_keys = utils.get_cse_keys(int(utils.env_variable("NUM_KEYS")))
     
     social_network = SocialNetwork.get_social_network()
     file_name = utils.list_files_and_get_input()
