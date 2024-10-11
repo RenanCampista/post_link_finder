@@ -49,7 +49,18 @@ def list_files_and_get_input() -> str:
 def filter_bmp_characters(text: str) -> str:
     """Remove characters outside the Basic Multilingual Plane (BMP)."""
     return re.sub(r'[^\u0000-\uFFFF]', '', text)
-              
+
+
+def get_cse_keys(num_keys: int) -> list:
+    """Get the API keys for the Custom Search Engine."""
+    cse_keys: list[list[str, int, bool]] # # [key, num_requests, is_active]]
+    
+    cse_keys = [
+        [env_variable(f"CSE_KEY_{i}"), 0, True] for i in range(1, num_keys + 1)
+    ]
+    
+    return cse_keys
+         
                 
 def read_posts(file_path: str) -> pd.DataFrame:
     """Reads the CSV file with the posts and returns a DataFrame."""
