@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse
 import json
 
-MIX_CARACTERES = 200
+MIX_CARACTERES = 150
 
 
 def env_variable(var_name: str) -> str:
@@ -53,10 +53,10 @@ def filter_bmp_characters(text: str) -> str:
 
 def get_cse_keys(num_keys: int) -> list:
     """Get the API keys for the Custom Search Engine."""
-    cse_keys: list[list[str, int, bool]] # # [key, num_requests, is_active]]
+    cse_keys: list # # [key, num_requests, is_active]]
     
     cse_keys = [
-        [env_variable(f"CSE_API_KEY_{i}"), 0, True] for i in range(num_keys)
+        env_variable(f"CSE_API_KEY_{i}") for i in range(num_keys)
     ]
     
     return cse_keys
@@ -64,6 +64,7 @@ def get_cse_keys(num_keys: int) -> list:
                 
 def read_posts(file_path: str) -> pd.DataFrame:
     """Reads the CSV file with the posts and returns a DataFrame."""
+    validate_file_extension(file_path, '.csv')
     try:
         return pd.read_csv(file_path)
     except FileNotFoundError:
@@ -102,6 +103,7 @@ def clean_data_posts(data_posts: pd.DataFrame) -> pd.DataFrame:
 
 def extract_relevant_url(url: str) -> str:
     """Extracts the relevant part of the URL."""
+    if not url: return ''
     parsed_url = urlparse(url)
     return f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
 

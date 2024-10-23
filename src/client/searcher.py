@@ -7,42 +7,113 @@ from dotenv import load_dotenv
 from googlesearch import search
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from bs4 import BeautifulSoup
+import random
+import requests
+import time
 
 
 CSE_ID = None
-cse_keys: list[list[str, int, bool]] # [key, num_requests, is_active]
+cse_keys: list
 gs_active = True
 
-def search_with_cse(query: str, social_network: SocialNetwork, keys: list) -> str:
-    """Searches Google for the query and returns the first relevant URL."""
+class CSEKey:
+    def __init__(self, key: str):
+        self.key = key
+        self.num_requests = 0
+        self.is_active = True
 
-    for k in range(len(keys)):
-        if not keys[k][2] or keys[k][1] > 100:  # Se chave estiver desativada or ter atingido 100 requisições, pule para a próxima
-            continue
-        
-        service = build("customsearch", "v1", developerKey=keys[k][0])
-        keys[k][1] += 1
-        
-        try:
-            response = service.cse().list(
-                q=query,
-                cx=CSE_ID,
-            ).execute()
+    def increment_requests(self):
+        self.num_requests += 1
+        if self.num_requests > 100:
+            self.is_active = False
+
+
+class CSEKeyManager:
+    def __init__(self, keys: list[str]):
+        self.keys = [CSEKey(key) for key in keys]
+        self.sucess_searches = 0
+
+    def get_active_key(self):
+        for key in self.keys:
+            if key.is_active:
+                return key
+        return None
+
+    def search_post(self, query: str, social_network: SocialNetwork) -> str:
+        """Searches Google for the query and returns the first relevant URL."""
+        while True:
+            key = self.get_active_key()
+            if not key:
+                print("Todas as chaves do cse atingiram o limite de requisições.")
+                return ''
             
-            if 'items' in response:
-                for item in response['items']:
-                    link = item['link']
-                    if social_network.is_valid_link(link):
-                        return link
-            return ''
-        except HttpError as e:
-            if e.resp.status == 429:
-                # Acabou a cota da api
-                keys[k][2] = False
-            else:
+            service = build("customsearch", "v1", developerKey=key.key)
+            key.increment_requests()
+            
+            try:
+                response = service.cse().list(
+                    q=query,
+                    cx=CSE_ID,
+                ).execute()
+                
+                if 'items' in response:
+                    for item in response['items']:
+                        link = item['link']
+                        if social_network.is_valid_link(link):
+                            self.sucess_searches += 1
+                            return link
+                return ''
+            except HttpError as e:
+                if e.resp.status == 429:
+                    # Acabou a cota da api
+                    print(f"Chave {key.key} atingiu o limite de requisições. Desativando chave.")
+                    key.is_active = False
+                else:
+                    print(f"Erro na requisição: {e}")
+                    return '' 
+
+
+class SEAlternativesManager():
+    USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.48",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    ]
+    def __init__(self, searches_urls: list[str]):
+        self.searches_urls = searches_urls
+        self.search_sucess = 0
+        
+    def make_request(self, query: str, social_network: SocialNetwork) -> str:
+        headers = {
+            "User-Agent": random.choice(self.USER_AGENTS),
+        }
+        
+        for url in self.searches_urls:
+            try:
+                response = requests.get(url+query, headers=headers)
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e:
                 print(f"Erro na requisição: {e}")
                 return ''
-        
+            except Exception as e:
+                print(f"Erro na requisição: {e}")
+                return ''
+                
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if social_network.is_valid_link(href):
+                    self.search_sucess += 1
+                    return href
+            
+            time.sleep(random.uniform(1, 3))
+        return ''
+
 
 def search_with_gs(query: str, social_network: SocialNetwork) -> str:
     """Searches Google for the query and returns the first relevant URL."""
@@ -55,7 +126,7 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
         return ''
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 429:
-            print("Acabou a cota da api")
+            print("Excesso de requisições do gs. Desativando gs.")
             global gs_active
             gs_active = False
             return ''
@@ -65,51 +136,61 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
     except Exception as e:
         print(f"Erro na requisição: {e}")
         return ''
+    
+
+def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
+    global gs_active
+    
+    post_url = cse.search_post(query, social_network)
+    
+    if not post_url: post_url = alt.make_request(query, social_network)
+    
+    if not post_url and gs_active:
+        post_url = search_with_gs(query, social_network)
+        
+    return utils.extract_relevant_url(post_url)
 
 
 def main():
     global CSE_ID
     CSE_ID = utils.env_variable("CSE_ID")
     cse_keys = utils.get_cse_keys(int(utils.env_variable("NUM_KEYS")))
+    key_manager = CSEKeyManager(cse_keys)
+    
+    alt_search_engines = SEAlternativesManager([
+        "https://www.bing.com/search?q=",
+        "https://duckduckgo.com/html/?q="
+    ])
     
     social_network = SocialNetwork.get_social_network()
     file_name = utils.list_files_and_get_input()
-    utils.validate_file_extension(file_name, '.csv')
     data_posts = utils.read_posts(file_name)
-    posts_without_url = data_posts # Copiar o DataFrame para manter os posts sem URL
+    posts_without_url = data_posts.copy(deep=True)  # Cópia profunda
     
-    # Converter a coluna de URLs para string
-    url_column = social_network.get_post_url_column()
-    data_posts[url_column] = data_posts[url_column].astype(str)
-    
-    global gs_active
     for index, row in data_posts.iterrows():
         text = row['message']
         text = utils.filter_bmp_characters(text)
         
         query = social_network.generate_query(text, row['username'])
-        cse_post_url = search_with_cse(query, social_network, cse_keys)
+        post_url = process_search(query, social_network, key_manager, alt_search_engines)
         
-        if cse_post_url:
-            cse_post_url = utils.extract_relevant_url(cse_post_url)
-            data_posts.at[index, social_network.get_post_url_column()] = cse_post_url
-            print(f"URL encontrada pelo cse para a linha {index + 2}: {cse_post_url}")
+        if post_url:
+            data_posts.at[index, social_network.get_post_url_column()] = post_url
+            print(f"URL encontrada para a linha {index + 2}: {post_url}")
             posts_without_url.drop(index, inplace=True)  # Remover a linha
         else:
-            # Tentar pelo outro método
-            gs_post_url = search_with_gs(query, social_network) if gs_active else ''
-            if gs_post_url:
-                gs_post_url = utils.extract_relevant_url(gs_post_url)
-                data_posts.at[index, social_network.get_post_url_column()] = gs_post_url
-                print(f"URL encontrada pelo gs para a linha {index + 2}: {gs_post_url}")
-                posts_without_url.drop(index, inplace=True)  # Remover a linha
-            else:
-                print(f"URL não encontrada para a linha {index + 2}")
-                data_posts.drop(index, inplace=True)  # Remover a linha
+            print(f"URL não encontrada para a linha {index + 2}")
+            data_posts.drop(index, inplace=True)  # Remover a linha
+        
+    data_posts.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
+    posts_without_url.to_csv(f'{file_name[:-4]}_sem_url.csv', index=False)
                 
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
-    posts_without_url.to_csv(f'{file_name[:-4]}_sem_url.csv', index=False)
+
+    print(f"\nTotal de posts: {len(data_posts)}")
+    print(f"Total de posts sem URL: {len(posts_without_url)}")
+
     
 if __name__ == '__main__':
     load_dotenv()
