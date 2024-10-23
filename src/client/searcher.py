@@ -41,7 +41,7 @@ class CSEKeyManager:
         while True:
             key = self.get_active_key()
             if not key:
-                print("All CSE keys have reached the request limit.")
+                print("Todas as chaves atingiram o limite de requisições. Desativando CSE.")
                 return ''
             
             service = build("customsearch", "v1", developerKey=key.key)
@@ -58,7 +58,7 @@ class CSEKeyManager:
                 return ''
             except HttpError as e:
                 if e.resp.status == 429:
-                    print(f"Key {key.key} reached the request limit. Deactivating key.")
+                    print(f"Key {key.key} atingiu o limite de requisições. Desativando chave...")
                     key.is_active = False
                 else:
                     print(f"Request error: {e}")
@@ -86,10 +86,10 @@ class SEAlternativesManager:
                 response = requests.get(url + query, headers=headers, timeout=10)
                 response.raise_for_status()
             except requests.exceptions.HTTPError as e:
-                print(f"Request error: {e}")
+                print(f"Erro na requisição: {e}")
                 return ''
             except Exception as e:
-                print(f"Request error: {e}")
+                print(f"Erro na requisição: {e}")
                 return ''
                 
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -113,14 +113,14 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
         return ''
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 429:
-            print("GS request limit reached. Deactivating GS.")
+            print("Google Search atingiu o limite de requisições. Desativando GS.")
             gs_active = False
             return ''
         else:
-            print(f"Request error: {e}")
+            print(f"Erro na requisição: {e}")
             return ''
     except Exception as e:
-        print(f"Request error: {e}")
+        print(f"Erro na requisição: {e}")
         return ''
 
 def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
@@ -162,10 +162,10 @@ def main():
         
         if post_url:
             data_posts.at[index, social_network.get_post_url_column()] = post_url
-            print(f"URL found for row {index + 2}: {post_url}")
+            print(f"URL encontrada para a linha{index + 2}: {post_url}")
             posts_without_url.drop(index, inplace=True)
         else:
-            print(f"URL not found for row {index + 2}")
+            print(f"URL não encontrada para a linha {index + 2}")
             data_posts.drop(index, inplace=True)
         
     data_posts.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
@@ -174,8 +174,8 @@ def main():
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
 
-    print(f"\nTotal posts: {len(data_posts)}")
-    print(f"Total posts without URL: {len(posts_without_url)}")
+    print(f"\nTotal de posts: {len(data_posts)}")
+    print(f"Total de posts sem URL: {len(posts_without_url)}")
 
 if __name__ == '__main__':
     main()
