@@ -141,6 +141,11 @@ class SocialNetwork(Enum):
         for cl_column, ec_column, value in self.mapping_columns():
             df_fixed[ec_column] = posts_cl[cl_column] if cl_column else value
 
-        df_fixed['profileUrl'] = df_fixed['username'].apply(self.generate_profile_url)
+        # Verificar se a coluna 'username' existe
+        if 'username' not in df_fixed.columns:
+            df_fixed['username'] = None  # Adicionar coluna 'username' com valores padrão
+
+        if df_fixed['username'].notnull().any():
+            df_fixed['profileUrl'] = df_fixed['username'].apply(self.generate_profile_url)
 
         return df_fixed
