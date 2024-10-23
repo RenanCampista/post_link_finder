@@ -1,6 +1,5 @@
 """Utility functions for the Content Library project."""
 
-from enum import Enum
 import sys
 import os
 import pandas as pd
@@ -129,6 +128,7 @@ def format_data(data_posts: pd.DataFrame, theme: str) -> list:
             "metadata": {
                 "theme": theme,
                 "terms": '',
+                "project": "mma",
                 "api_version": 'ContentLibrary'
             }
         })
