@@ -152,8 +152,8 @@ def main():
     social_network = SocialNetwork.get_social_network()
     file_name = utils.list_files_and_get_input()
     data_posts = utils.read_posts(file_name)
-    posts_without_url = data_posts.copy(deep=True)
     
+    total_posts = len(data_posts)
     for index, row in data_posts.iterrows():
         text = row['message']
         text = utils.filter_bmp_characters(text)
@@ -163,19 +163,16 @@ def main():
         if post_url:
             data_posts.at[index, social_network.get_post_url_column()] = post_url
             print(f"URL encontrada para a linha{index + 2}: {post_url}")
-            posts_without_url.drop(index, inplace=True)
         else:
             print(f"URL não encontrada para a linha {index + 2}")
             data_posts.drop(index, inplace=True)
         
     data_posts.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
-    posts_without_url.to_csv(f'{file_name[:-4]}_sem_url.csv', index=False)
                 
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
-
-    print(f"\nTotal de posts: {len(data_posts)}")
-    print(f"Total de posts sem URL: {len(posts_without_url)}")
-
+    print(f"Posts com links encontrados: {len(json_data_posts)}/{total_posts}")
+    
+    
 if __name__ == '__main__':
     main()
