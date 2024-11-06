@@ -83,10 +83,10 @@ class SEAlternativesManager:
         
         for url in self.searches_urls:
             try:
-                response = requests.get(url + query, headers=headers, timeout=10)
+                response = requests.get(url + query, headers=headers, timeout=30)
                 response.raise_for_status()
             except requests.exceptions.HTTPError as e:
-                print(f"Erro na requisição: {e}")
+                print("Erro na requisição")
                 return ''
             except Exception as e:
                 print(f"Erro na requisição: {e}")
@@ -126,10 +126,12 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
 def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
     """Try searching using all available mechanisms."""
     post_url = cse.search_post(query, social_network)
-    if not post_url:
-        post_url = alt.make_request(query, social_network)
+
     if not post_url and gs_active:
         post_url = search_with_gs(query, social_network)
+        
+    if not post_url:
+        post_url = alt.make_request(query, social_network)
     return post_url or ''
 
 def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
@@ -145,8 +147,8 @@ def main():
     key_manager = CSEKeyManager(cse_keys)
     
     alt_search_engines = SEAlternativesManager([
+        "https://duckduckgo.com/html/?q=",
         "https://www.bing.com/search?q=",
-        "https://duckduckgo.com/html/?q="
     ])
     
     social_network = SocialNetwork.get_social_network()
@@ -154,6 +156,7 @@ def main():
     data_posts = utils.read_posts(file_name)
     
     total_posts = len(data_posts)
+    sucess = 0
     for index, row in data_posts.iterrows():
         text = row['message']
         text = utils.filter_bmp_characters(text)
@@ -163,15 +166,18 @@ def main():
         if post_url:
             data_posts.at[index, social_network.get_post_url_column()] = post_url
             print(f"URL encontrada para a linha{index + 2}: {post_url}")
+            sucess += 1
         else:
             print(f"URL não encontrada para a linha {index + 2}")
-            data_posts.drop(index, inplace=True)
+            #data_posts.drop(index, inplace=True)
+            # Colocar o link do perfil do usuário
+            data_posts.at[index, social_network.get_post_url_column()] = data_posts.at[index, 'profileUrl']
         
     data_posts.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
                 
     json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
-    print(f"Posts com links encontrados: {len(json_data_posts)}/{total_posts}")
+    print(f"Posts com links encontrados: {sucess}/{total_posts}")
     
     
 if __name__ == '__main__':

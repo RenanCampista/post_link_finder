@@ -122,8 +122,7 @@ class SocialNetwork(Enum):
         
     def generate_profile_url(self, username: str) -> str:
         """Generate the profile URL based on the username."""
-        return f"{self.url}{username}"
-             
+        return f"{self.url}{username}"            
              
     def generate_query(self, query: str, username: str) ->str:
         if self == self.__class__.INSTAGRAM:

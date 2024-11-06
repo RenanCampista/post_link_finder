@@ -128,7 +128,7 @@ def format_data(data_posts: pd.DataFrame, theme: str) -> list:
             "metadata": {
                 "theme": theme,
                 "terms": '',
-                "project": "mma",
+                "project": "vacina",
                 "api_version": 'ContentLibrary'
             }
         })
