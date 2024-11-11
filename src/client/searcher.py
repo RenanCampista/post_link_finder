@@ -6,10 +6,7 @@ from dotenv import load_dotenv
 from googlesearch import search
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from bs4 import BeautifulSoup
-import random
 import requests
-import time
 
 CSE_ID = None
 gs_active = True
@@ -24,6 +21,7 @@ class CSEKey:
         self.num_requests += 1
         if self.num_requests > 100:
             self.is_active = False
+
 
 class CSEKeyManager:
     def __init__(self, keys: list[str]):
@@ -64,45 +62,8 @@ class CSEKeyManager:
                     print(f"Request error: {e}")
                     return '' 
 
-class SEAlternativesManager:
-    USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.48",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    ]
 
-    def __init__(self, searches_urls: list[str]):
-        self.searches_urls = searches_urls
-        self.search_success = 0
-        
-    def make_request(self, query: str, social_network: SocialNetwork) -> str:
-        headers = {"User-Agent": random.choice(self.USER_AGENTS)}
-        
-        for url in self.searches_urls:
-            try:
-                response = requests.get(url + query, headers=headers, timeout=30)
-                response.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                print("Erro na requisição")
-                return ''
-            except Exception as e:
-                print(f"Erro na requisição: {e}")
-                return ''
-                
-            soup = BeautifulSoup(response.text, 'html.parser')
-            for link in soup.find_all('a', href=True):
-                href = link['href']
-                if social_network.is_valid_link(href):
-                    self.search_success += 1
-                    return href
-            
-            time.sleep(random.uniform(1, 3))
-        return ''
-
-def search_with_gs(query: str, social_network: SocialNetwork) -> str:
+def search_with_gs_lib(query: str, social_network: SocialNetwork) -> str:
     """Searches Google for the query and returns the first relevant URL."""
     global gs_active
     try:
@@ -123,21 +84,22 @@ def search_with_gs(query: str, social_network: SocialNetwork) -> str:
         print(f"Erro na requisição: {e}")
         return ''
 
-def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
+
+def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> str:
     """Try searching using all available mechanisms."""
     post_url = cse.search_post(query, social_network)
 
     if not post_url and gs_active:
-        post_url = search_with_gs(query, social_network)
+        post_url = search_with_gs_lib(query, social_network)
         
-    if not post_url:
-        post_url = alt.make_request(query, social_network)
     return post_url or ''
 
-def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager, alt: SEAlternativesManager) -> str:
+
+def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> str:
     """Process the search and return the relevant URL."""
-    post_url = search_with_all_engines(query, social_network, cse, alt)
+    post_url = search_with_all_engines(query, social_network, cse)
     return utils.extract_relevant_url(post_url)
+
 
 def main():
     load_dotenv()
@@ -146,37 +108,37 @@ def main():
     cse_keys = utils.get_cse_keys(int(utils.env_variable("NUM_KEYS")))
     key_manager = CSEKeyManager(cse_keys)
     
-    alt_search_engines = SEAlternativesManager([
-        "https://duckduckgo.com/html/?q=",
-        "https://www.bing.com/search?q=",
-    ])
-    
     social_network = SocialNetwork.get_social_network()
     file_name = utils.list_files_and_get_input()
-    data_posts = utils.read_posts(file_name)
+    df = utils.read_posts(file_name)
     
-    total_posts = len(data_posts)
+    total_posts = len(df)
     sucess = 0
-    for index, row in data_posts.iterrows():
+    for index, row in df.iterrows():
+        link = row[social_network.get_post_url_column()]
+        if "instagram" in str(link) or "facebook" in str(link):
+            print(f"linha {index + 2} já possui link")
+            sucess += 1
+            continue
+        
         text = row['message']
         text = utils.filter_bmp_characters(text)
         query = social_network.generate_query(text, row['username'])
-        post_url = process_search(query, social_network, key_manager, alt_search_engines)
+        post_url = process_search(query, social_network, key_manager)
         
         if post_url:
-            data_posts.at[index, social_network.get_post_url_column()] = post_url
-            print(f"URL encontrada para a linha{index + 2}: {post_url}")
+            df.at[index, social_network.get_post_url_column()] = post_url
+            print(f"URL encontrada para a linha {index + 2}: {post_url}")
             sucess += 1
         else:
             print(f"URL não encontrada para a linha {index + 2}")
-            #data_posts.drop(index, inplace=True)
             # Colocar o link do perfil do usuário
-            data_posts.at[index, social_network.get_post_url_column()] = data_posts.at[index, 'profileUrl']
+            df.at[index, social_network.get_post_url_column()] = df.at[index, 'profileUrl']
         
-    data_posts.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
+    df.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
                 
-    json_data_posts = utils.format_data(data_posts, utils.extract_theme_from_filename(file_name))
-    utils.save_to_json(json_data_posts, f'{file_name[:-4]}.json')
+    json_df = utils.format_data(df, utils.extract_theme_from_filename(file_name))
+    utils.save_to_json(json_df, f'{file_name[:-4]}.json')
     print(f"Posts com links encontrados: {sucess}/{total_posts}")
     
     

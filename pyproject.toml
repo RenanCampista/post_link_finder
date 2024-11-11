@@ -20,7 +20,6 @@ python = ">=3.10,<3.13"
 requests = "^2.31.0"
 python-dotenv = "^1.0.1"
 google-api-python-client = ">=2.129.0"
-beautifulsoup4 = ">=4.12.3"
 pandas = ">=2.2.2"
 googlesearch-python = ">=1.2.5"
 poetry-pyinstaller-plugin = "^1.1.8"  # Mover para a seção de dependências

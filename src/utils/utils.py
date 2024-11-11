@@ -77,27 +77,27 @@ def read_posts(file_path: str) -> pd.DataFrame:
         sys.exit(1)
         
 
-def clean_data_posts(data_posts: pd.DataFrame) -> pd.DataFrame:
+def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     """Remove duplicates and posts with less than min caracteres characters."""
-    prev_length = len(data_posts)
+    prev_length = len(df)
     
     # Remove posts duplicados
-    data_posts = data_posts.drop_duplicates(subset='text')
-    duplicates = prev_length - len(data_posts)
+    df = df.drop_duplicates(subset='text')
+    duplicates = prev_length - len(df)
 
     # Remove posts com menos de MIX_CARACTERES caracteres
-    data_posts = data_posts[data_posts['text'].str.len() >= MIX_CARACTERES]
-    min_caracteres_removed = prev_length - len(data_posts)
+    df = df[df['text'].str.len() >= MIX_CARACTERES]
+    min_caracteres_removed = prev_length - len(df)
 
     # Remove quebras de linha e vírgulas do campo 'text'
-    data_posts['text'] = data_posts['text'].apply(lambda x: re.sub(r'[,\r\n]', ' ', str(x)))
+    df['text'] = df['text'].apply(lambda x: re.sub(r'[,\r\n]', ' ', str(x)))
 
     print(f"\nTotal de posts lidos: {prev_length}.")
-    print(f"Posts com menos de {MIX_CARACTERES} caracteres: {prev_length - len(data_posts)}.")
+    print(f"Posts com menos de {MIX_CARACTERES} caracteres: {prev_length - len(df)}.")
     print(f"Posts duplicados: {duplicates}.")
     print(f"Posts restantes: {prev_length - duplicates - min_caracteres_removed}.")
     
-    return data_posts
+    return df
 
 
 def extract_relevant_url(url: str) -> str:
@@ -118,11 +118,11 @@ def extract_theme_from_filename(filename: str) -> str:
     return theme.lower()
     
 
-def format_data(data_posts: pd.DataFrame, theme: str) -> list:
-    data_posts = data_posts.fillna('')
-    data_posts = data_posts.replace("Null", None)
+def format_data(df: pd.DataFrame, theme: str) -> list:
+    df = df.fillna('')
+    df = df.replace("Null", None)
     formatted_data = []
-    for _, row in data_posts.iterrows():
+    for _, row in df.iterrows():
         formatted_data.append({
             "body": row.to_dict(),
             "metadata": {
