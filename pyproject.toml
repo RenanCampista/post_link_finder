@@ -9,6 +9,7 @@ packages = [
     { include = "social_network", from = "src" },
     { include = "client", from = "src", format = "wheel" },
     { include = "utils", from = "src" },
+    { include = "search_engines", from = "src" }
 ]
 
 [tool.poetry.scripts]

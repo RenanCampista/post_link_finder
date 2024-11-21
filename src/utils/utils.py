@@ -52,14 +52,8 @@ def filter_bmp_characters(text: str) -> str:
 
 def get_cse_keys(num_keys: int) -> list:
     """Get the API keys for the Custom Search Engine."""
-    cse_keys: list # # [key, num_requests, is_active]]
+    return [env_variable(f"CSE_API_KEY_{i}") for i in range(num_keys)]
     
-    cse_keys = [
-        env_variable(f"CSE_API_KEY_{i}") for i in range(num_keys)
-    ]
-    
-    return cse_keys
-         
                 
 def read_posts(file_path: str) -> pd.DataFrame:
     """Reads the CSV file with the posts and returns a DataFrame."""
@@ -124,12 +118,12 @@ def format_data(df: pd.DataFrame, theme: str) -> list:
     formatted_data = []
     for _, row in df.iterrows():
         formatted_data.append({
-            "body": row.to_dict(),
-            "metadata": {
-                "theme": theme,
-                "terms": '',
-                "project": "vacina",
-                "api_version": 'ContentLibrary'
+            'body': row.to_dict(),
+            'metadata': {
+                'theme': theme,
+                'terms': '',
+                'project': 'vacina',
+                'api_version': 'ContentLibrary'
             }
         })
     return formatted_data
@@ -139,3 +133,21 @@ def save_to_json(data: list, filename: str):
     """Saves a list of data to a JSON file."""
     with open(filename, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
+        
+        
+def signal_handler(sig, frame, df, file_path):
+    """Handles the signal interrupt (Ctrl+C) to save the data and exit the program."""
+    print('\nTem certeza que deseja encerrar o processo?')
+    while True:
+        print('1: Sim, salvar e encerrar')
+        print('2: Não, continuar')
+        choice = input('Escolha uma opção: ')
+        if choice == '1':
+            df.to_csv(file_path, index=False)
+            print('Arquivo salvo e encerrando...')
+            sys.exit(0)
+        elif choice == '2':
+            print('Continuando o processo...')
+            break
+        else:
+            print('Opção inválida. Tente novamente.')
