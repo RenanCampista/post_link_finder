@@ -2,9 +2,8 @@
 Este projeto foi desenvolvido para obter links de postagens do Facebook e Instagram.
 
 O projeto é dividido em duas partes:
-## Fragmentor
-Este programa quebra um arquivo csv em arquivos menores, de no máximo 500 linhas. Isso facilita para que o programa de busca de links possa processar os arquivos menores, sem sobrecarregar a API. Além disso, o fragmentor elimina posts repetidos ou com texto do post com menos de 150 caracteres.
-
+## Formatter
+Este programa elimina posts repetitivos e formata os dados para o padrão utilizado no projeto alvo.
 
 ## Searcher
 Programa principal, responsável por buscar os links de postagens do Facebook e Instagram. O programa lê os arquivos fragmentados e busca os links de postagens a partir do texto da postagem e do outro dela. 
@@ -19,7 +18,7 @@ poetry install
 ## Utilização
 Para utilizar o programa fragmentador, execute o comando abaixo:
 ```bash
-poetry run fragmentor
+poetry run formatter
 ```
 
 Para utilizar o programa de busca de links, execute o comando abaixo:

@@ -20,6 +20,7 @@ class CSEKey:
     def increment_requests(self):
         self.num_requests += 1
         if self.num_requests > 100:
+            print(f"\033[91mChave{self.key} atingiu o limite diário de requisições. Chave desativada.\033[0m")
             self.is_active = False
 
 
@@ -27,6 +28,7 @@ class CSEKeyManager:
     def __init__(self, keys: list[str]):
         self.keys = [CSEKey(key) for key in keys]
         self.success_searches = 0
+        self.all_keys_off = False
 
     def get_active_key(self):
         for key in self.keys:
@@ -39,7 +41,9 @@ class CSEKeyManager:
         while True:
             key = self.get_active_key()
             if not key:
-                print("Todas as chaves atingiram o limite de requisições. Desativando CSE.")
+                if not self.all_keys_off:
+                    print("\033[91mTodas as chaves atingiram o limite de requisições. Desativando CSE.\033[0m")
+                    self.all_keys_off = True
                 return ''
             
             service = build("customsearch", "v1", developerKey=key.key)
@@ -56,7 +60,7 @@ class CSEKeyManager:
                 return ''
             except HttpError as e:
                 if e.resp.status == 429:
-                    print(f"Key {key.key} atingiu o limite de requisições. Desativando chave...")
+                    print(f"\033[91mKey {key.key} atingiu o limite de requisições. Desativando chave...\033[0m")
                     key.is_active = False
                 else:
                     print(f"Request error: {e}")
@@ -67,14 +71,20 @@ def search_with_gs_lib(query: str, social_network: SocialNetwork) -> str:
     """Searches Google for the query and returns the first relevant URL."""
     global gs_active
     try:
-        results = search(query, num_results=5, lang='pt-br', sleep_interval=5)
+        results = search(
+            term=query, 
+            num_results=5, 
+            lang='pt-br', 
+            sleep_interval=10,
+            safe=None
+        )
         for link in results:
             if social_network.is_valid_link(link):
                 return link
         return ''
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 429:
-            print("Google Search atingiu o limite de requisições. Desativando GS.")
+            print("\033[91mGoogle Search atingiu o limite de requisições. Desativando GS.\033[0m")
             gs_active = False
             return ''
         else:
@@ -85,20 +95,22 @@ def search_with_gs_lib(query: str, social_network: SocialNetwork) -> str:
         return ''
 
 
-def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> str:
+def search_with_all_engines(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> tuple:
     """Try searching using all available mechanisms."""
     post_url = cse.search_post(query, social_network)
+    search_engine = "cse"
 
     if not post_url and gs_active:
         post_url = search_with_gs_lib(query, social_network)
+        search_engine = "gs"
         
-    return post_url or ''
+    return post_url, search_engine
 
 
-def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> str:
+def process_search(query: str, social_network: SocialNetwork, cse: CSEKeyManager) -> tuple:
     """Process the search and return the relevant URL."""
-    post_url = search_with_all_engines(query, social_network, cse)
-    return utils.extract_relevant_url(post_url)
+    post_url, search_engine = search_with_all_engines(query, social_network, cse)
+    return utils.extract_relevant_url(post_url), search_engine
 
 
 def main():
@@ -112,34 +124,38 @@ def main():
     file_name = utils.list_files_and_get_input()
     df = utils.read_posts(file_name)
     
-    total_posts = len(df)
-    sucess = 0
+    success = 0
+    global gs_active
     for index, row in df.iterrows():
-        link = row[social_network.get_post_url_column()]
-        if "instagram" in str(link) or "facebook" in str(link):
+        if not gs_active and key_manager.all_keys_off:
+            print("\033[91mProcessamento paralisado pois as ferramentas de busca tiveram suas cotas esgotadas\033[0m")
+            break
+        
+        post_url = row[social_network.get_post_url_column()]
+        if "instagram" in str(post_url) or "facebook" in str(post_url):
             print(f"linha {index + 2} já possui link")
-            sucess += 1
+            success += 1
             continue
         
         text = row['message']
         text = utils.filter_bmp_characters(text)
         query = social_network.generate_query(text, row['username'])
-        post_url = process_search(query, social_network, key_manager)
+        post_url, search_engine = process_search(query, social_network, key_manager)
         
         if post_url:
             df.at[index, social_network.get_post_url_column()] = post_url
-            print(f"URL encontrada para a linha {index + 2}: {post_url}")
-            sucess += 1
+            print(f"URL encontrada para a linha {index + 2} pelo {search_engine}: {post_url}")
+            success += 1
         else:
             print(f"URL não encontrada para a linha {index + 2}")
             # Colocar o link do perfil do usuário
-            df.at[index, social_network.get_post_url_column()] = df.at[index, 'profileUrl']
+            # df.at[index, social_network.get_post_url_column()] = df.at[index, 'profileUrl']
         
-    df.to_csv(f'{file_name[:-4]}_com_url.csv', index=False)
+    df.to_csv(f'{file_name[:-4]}.csv', index=False)
                 
     json_df = utils.format_data(df, utils.extract_theme_from_filename(file_name))
     utils.save_to_json(json_df, f'{file_name[:-4]}.json')
-    print(f"Posts com links encontrados: {sucess}/{total_posts}")
+    print(f"Posts com links encontrados: {success}/{len(df)}")
     
     
 if __name__ == '__main__':

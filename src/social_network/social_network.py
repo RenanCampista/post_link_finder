@@ -138,7 +138,11 @@ class SocialNetwork(Enum):
         df_fixed = pd.DataFrame()
         
         for cl_column, ec_column, value in self.mapping_columns():
-            df_fixed[ec_column] = posts_cl[cl_column] if cl_column else value
+            if cl_column in posts_cl.columns:
+                df_fixed[ec_column] = posts_cl[cl_column]
+            else:
+                df_fixed[ec_column] = value
+
 
         # Verificar se a coluna 'username' existe
         if 'username' not in df_fixed.columns:

@@ -89,9 +89,9 @@ def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df['text'].str.len() >= MIX_CARACTERES]
     min_caracteres_removed = prev_length - len(df)
 
-    # Remove quebras de linha e vírgulas do campo 'text'
-    df['text'] = df['text'].apply(lambda x: re.sub(r'[,\r\n]', ' ', str(x)))
-
+    # Remove quebras de linha do campo 'text'
+    df['text'] = df['text'].apply(lambda x: re.sub(r'[\r\n]+', ' ', str(x)).strip())
+    
     print(f"\nTotal de posts lidos: {prev_length}.")
     print(f"Posts com menos de {MIX_CARACTERES} caracteres: {prev_length - len(df)}.")
     print(f"Posts duplicados: {duplicates}.")
